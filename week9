@@ -1,0 +1,16 @@
+Raspberry pi
+
+DNS 설정
+Advanced Options - Edit Connections...
+Ethernet - Wired connection1 누르고 톱니바퀴 클릭
+IPv4 Settings
+Address - 본인 컴퓨터 ip 주소 //10.40.45.46
+Netmask - 대부분 24
+Gateway - 10.40.45.1
+DNS servers - 221.154.90.11
+
+Terminal 
+sudo apt install vim -y //vim 설치
+sudo apt-get install fonts-unfonts-core -y //폰트 설치
+sudo apt-get install ibus-hangul -y  //한글 설치
+sudo reboot //리부트
