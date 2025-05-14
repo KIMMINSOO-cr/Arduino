@@ -1,0 +1,36 @@
+IoT 11주차 라즈베리파이 실습
+mkdir 202244074 - 학번 디렉터리 생성
+cd 202244074 - 학번 디렉터리로 이동
+vim test.py - test.py 파일 생성
+git clone https://github.com/python-telegram-bot/python-telegram-bot - GitHub 오픈소스 코드 복제
+cd python-telegram-bot - 복제한 폴더로 이동
+cd examples - exmaples 디렉터리로 이동
+vim timerbot.py - timerbot 예제 파일 수정, 기능 추가
+
+vim timerbot.py 에 들어가는 명령어
+import cv2 - OpenCV 라이브러리, 카메라 제어하기 위해 사용
+import time 
+#EDITING CODE - 코드 추가
+def takePhtho():
+  cap = cv2.VideoCapture(0) - 카메라 열기
+  cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640) - 카메라 해상도 설정(너비)
+  cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480) - 카메라 해상도 설정(높이)
+  if not cap.isOpened():
+    print("camera open error")
+    return
+  ret,image=cap.read() - 한 프레임 캡쳐
+  if not ret:
+    print("frame read error")
+    return
+  cv2.imshow('CAMERA', image) - 화면에 이미지 띄우기
+  time.sleep(1)
+  cv2.imwrite("./image.jpg", image) - image.jpg 이름으로 이미지 저장
+  cap.release()
+  cv2.destroyAllWindows() - 카메라 창 닫기
+
+테스트 함수 만들기 - /test라고 입력 시 KIM MINSOO 채팅으로 받기
+async def test(update: Update, context: ContextType.DEFAULT_TYPE) -> None:
+  await update.message.reply_text("KIM MINSOO")
+
+python timerbot.py - timerbot 실행
+
