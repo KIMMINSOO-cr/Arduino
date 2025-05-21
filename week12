@@ -1,0 +1,56 @@
+사물인터넷 12주차 정리
+
+pip install influxdb - influxdb 설치
+vim dustinfluxdb.py - influxdb 파일 수정
+
+vim dustinfluxdb.py 안에 들어가는 명령어들
+import time
+import requests, json
+from influxdb import InfluxDBClient as influxdb  # InfluxDB 클라이언트 라이브러리 임포트
+import serial  # 시리얼 통신을 위한 모듈
+
+# 아두이노나 센서와 연결된 시리얼 포트 설정 (/dev/ttyACM0), 속도는 9600bps
+seri = serial.Serial('/dev/ttyACM0', baudrate=9600, timeout=None)
+
+# 무한 루프를 통해 지속적으로 데이터 수집
+while True:
+    time.sleep(1)  # 1초 대기
+
+    # 시리얼 포트에 데이터가 있는지 확인
+    if seri.in_waiting != 0:
+        content = seri.readline()  # 한 줄 읽기
+        a = float(content.decode())  # 읽은 데이터를 float형으로 변환
+
+        # InfluxDB에 저장할 데이터 포맷 구성
+        data = [{
+            'measurement': 'dust',  # 측정값 이름
+            'tags': {
+                'InhaUni': '2222',  # 태그 (장소나 기기 번호 등 구분자)
+            },
+            'fields': {
+                'dust': a,  # 실제 측정값
+            }
+        }]
+
+        client = None
+        try:
+            # InfluxDB 클라이언트 생성 ('localhost' 서버의 'dust1' 데이터베이스)
+            client = influxdb('localhost', 8086, 'root', 'root', 'dust1')
+        except Exception as e:
+            print("Exception: " + str(e))  # 클라이언트 생성 실패 시 에러 출력
+
+        # 클라이언트가 정상적으로 생성되었을 경우
+        if client is not None:
+            try:
+                client.write_points(data)  # 데이터 쓰기
+            except Exception as e:
+                print("Exception write: " + str(e))  # 데이터 쓰기 실패 시 에러 출력
+            finally:
+                client.close()  # 사용 후 클라이언트 종료
+
+        # 측정값과 상태 메시지 출력
+        print(a)
+        print("running influxdb OK")
+
+
+
