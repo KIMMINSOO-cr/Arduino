@@ -1,0 +1,29 @@
+  1 includes Test; // Test 모듈을 포함
+  2 configuration TestAppC // TestAppC는 애플리케이션의 configuration 컴포넌트임을 선언
+  3 {
+  4 }
+  5 implementation
+  6 {
+  7     components TestC, MainC; // TestC 모듈과 시스템 시작을 담당하는 MainC 컴포넌트 포함
+  8     components LedsC, new TimerMilliC(); // LED 제어용 LedsC와 millisecond 단위 타이머 컴포넌트 포함
+  9
+ 10     components ActiveMessageC as AMC; // 무선 통신을 위한 ActiveMessageC 컴포넌트를 AMC로 별칭 설정
+ 11     components new AMSenderC(AM_TEST_DATA_MSG) as AMSC; // AM 타입이 AM_TEST_DATA_MSG인 메시지 송신기 컴포넌트를 AMSC로 별칭 설정
+ 12
+ 13     TestC.Boot -> MainC; // 시스템 부팅 이벤트를 MainC에서 TestC로 연결
+ 14     TestC.Leds -> LedsC; // LED 인터페이스를 LedsC와 연결
+ 15     TestC.MilliTimer -> TimerMilliC; // millisecond 타이머를 TimerMilliC와 연결
+ 16
+ 17     TestC.RadioControl -> AMC; // 라디오 제어 인터페이스를 ActiveMessageC와 연결
+ 18     TestC.RadioSend -> AMSC; // 메시지 송신 인터페이스를 AMSC와 연결
+ 19
+ 20     components new SensirionSht11C() as Sht11Ch0C; // 온습도 센서를 위한 SensirionSht11C 컴포넌트를 Sht11Ch0C로 별칭 설정
+ 21     TestC.Temp -> Sht11Ch0C.Temperature; // 온도 센서 인터페이스를 연결
+ 22     TestC.Humi -> Sht11Ch0C.Humidity; // 습도 센서 인터페이스를 연결
+ 23
+ 24     components new IlluAdcC() as Illu; // 조도 센서를 위한 IlluAdcC 컴포넌트를 Illu로 별칭 설정
+ 25     TestC.Illu -> Illu; // 조도 센서 인터페이스 연결
+ 26
+ 27     components BatteryC; // 배터리 상태 측정을 위한 BatteryC 컴포넌트 포함
+ 28     TestC.Battery -> BatteryC; // 배터리 인터페이스 연결
+ 29 }

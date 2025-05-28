@@ -1,0 +1,131 @@
+  1 module TestC // TestC 모듈 정의
+  2 {
+  3     uses {
+  4         interface Boot; // 부팅 완료 이벤트
+  5         interface Leds; // LED 제어 인터페이스
+  6         interface Timer<TMilli> as MilliTimer; // millisecond 타이머 인터페이스
+  7
+  8         interface SplitControl as RadioControl; // 무선 라디오 제어 (시작/정지)
+  9         interface AMSend as RadioSend; // 무선 메시지 전송 인터페이스
+ 10
+ 11         interface Read<uint16_t> as Temp; // 온도 센서 읽기
+ 12         interface Read<uint16_t> as Humi; // 습도 센서 읽기
+ 13         interface Read<uint16_t> as Illu; // 조도 센서 읽기
+ 14
+ 15         interface Battery; // 배터리 전압 인터페이스
+ 16     }
+ 17 }
+ 18
+ 19 implementation
+ 20 {
+ 21     message_t testMsgBffr; // 메시지를 담을 버퍼
+ 22     test_data_msg_t *testMsg; // 센서 데이터를 담는 메시지 구조체 포인터
+ 23
+ 24     uint32_t seqNo; // 메시지 시퀀스 번호
+ 25     uint8_t step; // 센서 순차 읽기 제어 변수
+ 26
+ 27     // 타이머 시작 태스크 정의
+ 28     task void startTimer();
+ 29
+ 30     event void Boot.booted() { // 시스템 부팅 완료 시 실행
+ 31         testMsg = (test_data_msg_t *) call RadioSend.getPayload(
+ 32                         &testMsgBffr, sizeof(test_data_msg_t)); // 메시지 페이로드 설정
+ 33         testMsg->srcID = TOS_NODE_ID; // 노드 ID 설정
+ 34         seqNo = 0; // 시퀀스 번호 초기화
+ 35         post startTimer(); // 타이머 시작 태스크 실행
+ 36     }
+ 37
+ 38     task void startTimer() {
+ 39         call MilliTimer.startPeriodic(TEST_PERIOD); // 주기적 타이머 시작
+ 40     }
+ 41
+ 42     task void radioOn(); // 라디오 시작 태스크
+ 43     event void MilliTimer.fired() { // 타이머 만료 시 라디오 켜기 요청
+ 44         post radioOn();
+ 45     }
+ 46
+ 47     void startDone(); // 라디오 시작 완료 처리 함수 선언
+ 48     task void radioOn() {
+ 49         if (call RadioControl.start() != SUCCESS) startDone(); // 라디오 시작 시도
+ 50     }
+ 51
+ 52     event void RadioControl.startDone(error_t error) { // 라디오 시작 완료 이벤트
+ 53         startDone();
+ 54     }
+ 55
+ 56     task void readTask(); // 센서 읽기 태스크
+ 57     void startDone() {
+ 58         step = 0; // 센서 읽기 단계 초기화
+ 59         post readTask(); // 센서 읽기 태스크 실행
+ 60         call Leds.led0Toggle(); // 상태 표시용 LED 토글
+ 61     }
+ 62
+ 63     void sendDone(); // 송신 완료 처리 함수 선언
+ 64     task void sendTask() {
+ 65         testMsg->seqNo = seqNo++; // 메시지 시퀀스 번호 설정
+ 66         testMsg->type = 2; // 메시지 타입 (THL 센서 데이터)
+ 67
+ 68         if (call RadioSend.send(AM_BROADCAST_ADDR, &testMsgBffr,
+ 69             sizeof(test_data_msg_t)) != SUCCESS) sendDone(); // 메시지 전송 시도
+ 70         call Leds.led2Toggle(); // 송신 시도 표시 LED 토글
+ 71     }
+ 72
+ 73     event void RadioSend.sendDone(message_t* msg, error_t error) { // 전송 완료 이벤트
+ 74         sendDone();
+ 75     }
+ 76
+ 77     task void radioOff(); // 라디오 종료 태스크
+ 78     void sendDone() {
+ 79         call Leds.led0Off(); // 모든 LED 끄기
+ 80         call Leds.led1Off();
+ 81         call Leds.led2Off();
+ 82         post radioOff(); // 라디오 종료 요청
+ 83     }
+ 84
+ 85     void stopDone(); // 라디오 종료 완료 처리 함수 선언
+ 86     task void radioOff() {
+ 87         if (call RadioControl.stop() != SUCCESS) stopDone(); // 라디오 종료 시도
+ 88     }
+ 89
+ 90     event void RadioControl.stopDone(error_t error) { // 라디오 종료 완료 이벤트
+ 91         stopDone();
+ 92     }
+ 93
+ 94     void stopDone() {
+ 95         // 라디오 종료 후 별도 작업 없음
+ 96     }
+ 97
+ 98     task void readTask() {
+ 99         switch(step) { // 센서 순차 읽기: 온도 → 습도 → 조도 → 배터리
+100             case 0:
+101                 call Temp.read(); break;
+102             case 1:
+103                 call Humi.read(); break;
+104             case 2:
+105                 call Illu.read(); break;
+106             default:
+107                 testMsg->battery = call Battery.getVoltage(); // 배터리 전압 읽기
+108                 post sendTask(); // 모든 센서 값 수집 후 전송 태스크 실행
+109                 break;
+110         }
+111         step += 1; // 다음 단계로 이동
+112     }
+113
+114     event void Temp.readDone(error_t error, uint16_t val) {
+115         // 읽기 실패 시 0xFFFA 저장
+116         testMsg->Temp = error == SUCCESS ? val : 0xFFFA;
+117         post readTask(); // 다음 센서 읽기
+118     }
+119
+120     event void Humi.readDone(error_t error, uint16_t val) {
+121         // 읽기 실패 시 0xFFFB 저장
+122         testMsg->Humi = error == SUCCESS ? val : 0xFFFB;
+123         post readTask();
+124     }
+125
+126     event void Illu.readDone(error_t error, uint16_t val){
+127         // 읽기 실패 시 0xFFFC 저장
+128         testMsg->Illu = error == SUCCESS ? val : 0xFFFC;
+129         post readTask();
+130     }
+131 }

@@ -1,0 +1,28 @@
+  1 #ifndef TEST_H // 헤더 중복 포함 방지를 위한 전처리기 지시문 시작
+  2 #define TEST_H
+  3 #include "message.h" // TinyOS의 메시지 관련 정의를 포함
+  4 enum {
+  5     TEST_PERIOD = 10240LU, // 타이머 주기 설정 (10240ms = 10.24초)
+  6 };
+  7 enum {
+  8     DFLT_VAL = 0x11, // 센서 초기 기본값 또는 테스트용 기본값
+  9 };
+ 10 enum {
+ 11     TEST_DATA_LENGTH = TOSH_DATA_LENGTH - 6, // 테스트 데이터 길이 설정 (오버헤드 제외)
+ 12 };
+ 13 enum {
+ 14     AM_TEST_DATA_MSG = 0xA4, // Active Message 타입 ID (AM 타입 0xA4)
+ 15 };
+ 16
+ 17 typedef nx_struct test_data_msg { // 센서 데이터를 전송하기 위한 메시지 구조체 정의
+ 18     nx_am_addr_t srcID;         // 송신 노드의 ID
+ 19     nx_uint32_t seqNo;          // 메시지 시퀀스 번호
+ 20     nx_uint16_t type;           // 데이터 타입 또는 구분용 필드
+ 21     nx_uint16_t Temp;           // 온도 값
+ 22     nx_uint16_t Humi;           // 습도 값
+ 23     nx_uint16_t Illu;           // 조도 값
+ 24     nx_uint16_t battery;        // 배터리 잔량 값
+ 25     // nx_uint8_t testData[TEST_DATA_LENGTH]; // 확장용 테스트 데이터 (주석 처리됨)
+ 26 } test_data_msg_t; // 메시지 구조체 타입 정의
+ 27
+ 28 #endif // TEST_H // 헤더 중복 포함 방지를 위한 전처리기 지시문 종료
